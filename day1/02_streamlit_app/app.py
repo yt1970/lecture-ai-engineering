@@ -46,8 +46,8 @@ def load_model():
 pipe = llm.load_model()
 
 # --- Streamlit アプリケーション ---
-st.title("🤖 LLM-jp-3 3.7b Chatbot with Feedback")
-st.write("LLM-jp-3 3.7bモデルを使用したチャットボットです。回答に対してフィードバックを行えます。")
+st.title("🤖 LLM-jp-3 3.7bインストラクションモデル Chatbot with Feedback")
+st.write("LLM-jp-3-3.7b-itモデルを使用したチャットボットです。回答に対してフィードバックを行えます。")
 st.markdown("---")
 
 # --- サイドバー ---
