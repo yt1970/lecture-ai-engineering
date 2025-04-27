@@ -46,8 +46,8 @@ def load_model():
 pipe = llm.load_model()
 
 # --- Streamlit アプリケーション ---
-st.title("😄 LLM-jp-3 3.7bインストラクションモデル Chatbot with Feedback")
-st.write("LLM-jp-3-3.7b-itモデルを使用したチャットボットです。回答に対してフィードバックを行えます。")
+st.title("😄 LLM-jp-3 3.7bインストラクションモデル Chatbot with Feedback") #day１宿題用「UIの変更」（モデルの変更をタイトルへ反映）
+st.write("LLM-jp-3-3.7b-itモデルを使用したチャットボットです。回答に対してフィードバックを行えます。") #day１宿題用「UIの変更」（モデルの変更をタイトルへ反映）
 st.markdown("---")
 
 # --- サイドバー ---
@@ -78,4 +78,4 @@ elif st.session_state.page == "サンプルデータ管理":
 
 # --- フッターなど（任意） ---
 st.sidebar.markdown("---")
-st.sidebar.info("開発者: satoyutaka")
+st.sidebar.info("開発者: satoyutaka") #day１宿題用「UIの変更」（開発者名の追加）
