@@ -78,12 +78,15 @@ def preprocessor():
 
     return preprocessor
 
+
 # モデル一覧
-@pytest.fixture(params=[
-    ("RandomForest", RandomForestClassifier(n_estimators=100, random_state=42)),
-    ("LogisticRegression", LogisticRegression(max_iter=1000)),
-    ("XGBoost", XGBClassifier(use_label_encoder=False, eval_metric="logloss")),
-])
+@pytest.fixture(
+    params=[
+        ("RandomForest", RandomForestClassifier(n_estimators=100, random_state=42)),
+        ("LogisticRegression", LogisticRegression(max_iter=1000)),
+        ("XGBoost", XGBClassifier(use_label_encoder=False, eval_metric="logloss")),
+    ]
+)
 def model_and_name(request):
     return request.param  # (name, model) tuple
 
@@ -199,7 +202,7 @@ def test_model_reproducibility(sample_data, preprocessor, model_and_name):
     model2 = Pipeline(
         steps=[
             ("preprocessor", preprocessor),
-            ("classifier",type(model_algo)(**model_algo.get_params())),
+            ("classifier", type(model_algo)(**model_algo.get_params())),
         ]
     )
 
