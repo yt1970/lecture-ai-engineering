@@ -13,6 +13,7 @@ warnings.filterwarnings("ignore")
 DATA_PATH = os.path.join(os.path.dirname(__file__), "../data/Titanic.csv")
 print("hello")
 
+
 @pytest.fixture
 def sample_data():
     """Titanicテスト用データセットを読み込む"""
