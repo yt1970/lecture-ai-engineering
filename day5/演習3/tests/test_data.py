@@ -11,7 +11,7 @@ warnings.filterwarnings("ignore")
 
 # テスト用データパスを定義
 DATA_PATH = os.path.join(os.path.dirname(__file__), "../data/Titanic.csv")
-
+print("hello")
 
 @pytest.fixture
 def sample_data():
