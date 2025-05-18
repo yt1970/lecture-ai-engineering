@@ -83,6 +83,9 @@ def preprocessor():
 def setup_mlflow():
     mlflow.set_tracking_uri("file://" + os.path.abspath("mlruns"))  # 任意のローカルURI
     mlflow.set_experiment("Titanic_Model_Tests")
+    # グローバル run を明示的に開始
+    with mlflow.start_run(run_name="Titanic_Model_Test_Session") as run:
+        yield  # テストがすべてこの run の中で実行される
 
 
 # モデル一覧
@@ -146,6 +149,8 @@ def test_model_accuracy(train_model):
     # 予測と精度計算
     y_pred = model.predict(X_test)
     accuracy = accuracy_score(y_test, y_pred)
+    print(f"{name} accuracy: {accuracy:.4f}")
+    
 
     with mlflow.start_run(run_name=name, nested=True):
         mlflow.log_param("model_name", name)
@@ -173,6 +178,10 @@ def test_model_inference_time(train_model):
     end_time = time.time()
 
     inference_time = end_time - start_time
+    print(f"{name} inference time: {inference_time:.4f} sec")
+
+    with mlflow.start_run(run_name=name, nested=True):
+        mlflow.log_metric("inference_time", inference_time)
 
     # 推論時間が1秒未満であることを確認
     assert inference_time < 1.0, f"{name}の推論時間が長すぎます: {inference_time}秒"

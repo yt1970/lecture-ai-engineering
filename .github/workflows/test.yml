@@ -41,3 +41,13 @@ jobs:
     - name: Run model tests
       run: |
         pytest day5/演習3/tests/test_model.py -v
+
+    - name: Debug mlruns existence
+      run: |
+        ls -R mlruns || echo "No mlruns directory found"
+        
+    - name: Save MLflow runs
+      uses: actions/upload-artifact@v3
+      with:
+        name: mlflow-runs
+        path: mlruns
