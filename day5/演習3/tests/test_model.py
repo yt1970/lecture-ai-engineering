@@ -150,7 +150,6 @@ def test_model_accuracy(train_model):
     y_pred = model.predict(X_test)
     accuracy = accuracy_score(y_test, y_pred)
     print(f"{name} accuracy: {accuracy:.4f}")
-    
 
     with mlflow.start_run(run_name=name, nested=True):
         mlflow.log_param("model_name", name)
