@@ -54,7 +54,7 @@ jobs:
 
     - name: Upload MLflow runs artifact
       if: always() && hashFiles('mlflow-runs.tar.gz') != ''
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: mlflow-runs
         path: mlflow-runs.tar.gz
