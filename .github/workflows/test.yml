@@ -41,3 +41,20 @@ jobs:
     - name: Run model tests
       run: |
         pytest day5/演習3/tests/test_model.py -v
+
+    - name: Archive mlruns if exists
+      if: always()
+      run: |
+        if [ -d "mlruns" ] && [ "$(ls -A mlruns)" ]; then
+          echo "Found mlruns. Creating archive..."
+          tar -czf mlflow-runs.tar.gz mlruns
+        else
+          echo "No mlruns directory found or it is empty. Skipping archive."
+        fi
+
+    - name: Upload MLflow runs artifact
+      if: always() && hashFiles('mlflow-runs.tar.gz') != ''
+      uses: actions/upload-artifact@v4
+      with:
+        name: mlflow-runs
+        path: mlflow-runs.tar.gz
