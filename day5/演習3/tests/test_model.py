@@ -79,6 +79,12 @@ def preprocessor():
     return preprocessor
 
 
+@pytest.fixture(scope="session", autouse=True)
+def setup_mlflow():
+    mlflow.set_tracking_uri("file://" + os.path.abspath("mlruns"))  # 任意のローカルURI
+    mlflow.set_experiment("Titanic_Model_Tests")
+
+
 # モデル一覧
 @pytest.fixture(
     params=[
@@ -141,13 +147,13 @@ def test_model_accuracy(train_model):
     y_pred = model.predict(X_test)
     accuracy = accuracy_score(y_test, y_pred)
 
-    with mlflow.start_run(run_name=name):
+    with mlflow.start_run(run_name=name, nested=True):
         mlflow.log_param("model_name", name)
         mlflow.log_metric("accuracy", accuracy)
 
     # 保存してモデルとして記録
     with tempfile.TemporaryDirectory() as tmpdir:
-        model_path = os.path.join(tmpdir, "model.pkl")
+        model_path = os.path.join(tmpdir, f"{name}_model.pkl")
         with open(model_path, "wb") as f:
             pickle.dump(model, f)
         mlflow.log_artifact(model_path, artifact_path=f"model_{name}")
