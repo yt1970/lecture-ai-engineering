@@ -19,8 +19,10 @@ jobs:
         
     - name: Install dependencies
       run: |
+        sudo apt-get update
+        sudo apt-get install -y build-essential
         python -m pip install --upgrade pip
-        pip install pytest great_expectations pandas scikit-learn flake8 black mypy pytest-cov
+        pip install pytest great_expectations pandas scikit-learn flake8 black mypy pytest-cov xgboost mlflow
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
         
     - name: Lint with flake8

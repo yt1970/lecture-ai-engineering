@@ -2,9 +2,14 @@ import os
 import pytest
 import pandas as pd
 import numpy as np
+import tempfile
 import pickle
 import time
+import mlflow
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.linear_model import LogisticRegression
+from sklearn.ensemble import RandomForestClassifier
+from xgboost import XGBClassifier
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
 from sklearn.impute import SimpleImputer
@@ -14,8 +19,9 @@ from sklearn.pipeline import Pipeline
 
 # テスト用データとモデルパスを定義
 DATA_PATH = os.path.join(os.path.dirname(__file__), "../data/Titanic.csv")
-MODEL_DIR = os.path.join(os.path.dirname(__file__), "../models")
-MODEL_PATH = os.path.join(MODEL_DIR, "titanic_model.pkl")
+# MODEL_DIR = os.path.join(os.path.dirname(__file__), "../models")
+# model_filename = f"{name}_model.pkl"
+# MODEL_PATH = os.path.join(MODEL_DIR, model_filename)
 
 
 @pytest.fixture
@@ -73,8 +79,28 @@ def preprocessor():
     return preprocessor
 
 
+@pytest.fixture(scope="session", autouse=True)
+def setup_mlflow():
+    mlflow.set_tracking_uri("file://" + os.path.abspath("mlruns"))  # 任意のローカルURI
+    mlflow.set_experiment("Titanic_Model_Tests")
+
+
+# モデル一覧
+@pytest.fixture(
+    params=[
+        ("RandomForest", RandomForestClassifier(n_estimators=100, random_state=42)),
+        ("LogisticRegression", LogisticRegression(max_iter=1000)),
+        ("XGBoost", XGBClassifier(use_label_encoder=False, eval_metric="logloss")),
+    ]
+)
+def model_and_name(request):
+    return request.param  # (name, model) tuple
+
+
 @pytest.fixture
-def train_model(sample_data, preprocessor):
+def train_model(sample_data, preprocessor, model_and_name):
+    # 複数のモデルをパラメータとして渡す
+    name, model_algo = model_and_name
     """モデルの学習とテストデータの準備"""
     # データの分割とラベル変換
     X = sample_data.drop("Survived", axis=1)
@@ -87,43 +113,59 @@ def train_model(sample_data, preprocessor):
     model = Pipeline(
         steps=[
             ("preprocessor", preprocessor),
-            ("classifier", RandomForestClassifier(n_estimators=100, random_state=42)),
+            ("classifier", model_algo),
         ]
     )
 
     # モデルの学習
     model.fit(X_train, y_train)
 
+    MODEL_DIR = os.path.join(os.path.dirname(__file__), "../models")
+    model_filename = f"{name}_model.pkl"
+    MODEL_PATH = os.path.join(MODEL_DIR, model_filename)
+
     # モデルの保存
     os.makedirs(MODEL_DIR, exist_ok=True)
     with open(MODEL_PATH, "wb") as f:
         pickle.dump(model, f)
 
-    return model, X_test, y_test
+    return name, model, X_test, y_test
 
 
-def test_model_exists():
-    """モデルファイルが存在するか確認"""
-    if not os.path.exists(MODEL_PATH):
-        pytest.skip("モデルファイルが存在しないためスキップします")
-    assert os.path.exists(MODEL_PATH), "モデルファイルが存在しません"
+# def test_model_exists():
+#     """モデルファイルが存在するか確認"""
+#     if not os.path.exists(MODEL_PATH):
+#         pytest.skip("モデルファイルが存在しないためスキップします")
+#     assert os.path.exists(MODEL_PATH), "モデルファイルが存在しません"
 
 
 def test_model_accuracy(train_model):
     """モデルの精度を検証"""
-    model, X_test, y_test = train_model
+    name, model, X_test, y_test = train_model
 
     # 予測と精度計算
     y_pred = model.predict(X_test)
     accuracy = accuracy_score(y_test, y_pred)
 
+    with mlflow.start_run(run_name=name, nested=True):
+        mlflow.log_param("model_name", name)
+        mlflow.log_metric("accuracy", accuracy)
+
+    # 保存してモデルとして記録
+    with tempfile.TemporaryDirectory() as tmpdir:
+        model_path = os.path.join(tmpdir, f"{name}_model.pkl")
+        with open(model_path, "wb") as f:
+            pickle.dump(model, f)
+        mlflow.log_artifact(model_path, artifact_path=f"model_{name}")
+
     # Titanicデータセットでは0.75以上の精度が一般的に良いとされる
-    assert accuracy >= 0.75, f"モデルの精度が低すぎます: {accuracy}"
+    assert accuracy >= 0.75, f"{name}モデルの精度が低すぎます: {accuracy}"
 
 
 def test_model_inference_time(train_model):
+    # 複数のモデルをパラメータとして渡す
     """モデルの推論時間を検証"""
-    model, X_test, _ = train_model
+    name, model, X_test, _ = train_model
 
     # 推論時間の計測
     start_time = time.time()
@@ -133,11 +175,21 @@ def test_model_inference_time(train_model):
     inference_time = end_time - start_time
 
     # 推論時間が1秒未満であることを確認
-    assert inference_time < 1.0, f"推論時間が長すぎます: {inference_time}秒"
+    assert inference_time < 1.0, f"{name}の推論時間が長すぎます: {inference_time}秒"
 
 
-def test_model_reproducibility(sample_data, preprocessor):
+def test_model_reproducibility(sample_data, preprocessor, model_and_name):
+    # 複数のモデルをパラメータとして渡す。
+    name, model_algo = model_and_name
     """モデルの再現性を検証"""
+
+    params = model_algo.get_params()
+    if "random_state" in params:
+        params["random_state"] = 42
+    # # 別インスタンスを2つ作る
+    # model1 = type(model_algo)(**model_algo.get_params())
+    # model2 = type(model_algo)(**model_algo.get_params())
+
     # データの分割
     X = sample_data.drop("Survived", axis=1)
     y = sample_data["Survived"].astype(int)
@@ -149,14 +201,14 @@ def test_model_reproducibility(sample_data, preprocessor):
     model1 = Pipeline(
         steps=[
             ("preprocessor", preprocessor),
-            ("classifier", RandomForestClassifier(n_estimators=100, random_state=42)),
+            ("classifier", type(model_algo)(**model_algo.get_params())),
         ]
     )
 
     model2 = Pipeline(
         steps=[
             ("preprocessor", preprocessor),
-            ("classifier", RandomForestClassifier(n_estimators=100, random_state=42)),
+            ("classifier", type(model_algo)(**model_algo.get_params())),
         ]
     )
 
