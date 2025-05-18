@@ -40,7 +40,7 @@ jobs:
         
     - name: Run model tests
       run: |
-        pytest day5/演習3/tests/test_model.py -v
+        pytest -s day5/演習3/tests/test_model.py -v
 
     - name: Archive mlruns if exists
       if: always()
